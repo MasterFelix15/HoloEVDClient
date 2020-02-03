@@ -13,12 +13,19 @@ public class UDPReceiver : MonoBehaviour
     Thread receiveThread;
     UdpClient client;
     public int port; // define > init
-    public List<GameObject> objects;
+    public GameObject headset;
+    public GameObject brain;
+    public GameObject tool;
     private Dictionary<string, string> updates;
+    private Dictionary<string, GameObject> objects;
 
     private void init()
     {
         updates = new Dictionary<string, string>();
+        objects = new Dictionary<string, GameObject>();
+        objects.Add("headset", headset);
+        objects.Add("brain", brain);
+        objects.Add("tool", tool);
         port = 8051;
         print("Sending to 127.0.0.1 : " + port);
         print("Test-Sending to this Port: nc -u 127.0.0.1  " + port + "");
@@ -39,7 +46,7 @@ public class UDPReceiver : MonoBehaviour
                 IPEndPoint anyIP = new IPEndPoint(IPAddress.Any, 0);
                 byte[] data = client.Receive(ref anyIP);
                 string text = Encoding.UTF8.GetString(data);
-                // print(">> " + text);
+                print(">> " + text);
                 // decoding
                 if (text.Length == 0)
                 {
@@ -71,16 +78,25 @@ public class UDPReceiver : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        foreach (string name in updates.Keys)
+        foreach (string name in objects.Keys)
         {
-            string objstr = updates[name];
-            var pos = objstr.Split(':')[1].Split(',');
-            Vector3 position = new Vector3(float.Parse(pos[0]), float.Parse(pos[1]), float.Parse(pos[2]));
-            var rot = objstr.Split(':')[2].Split(',');
-            Quaternion rotation = new Quaternion(float.Parse(rot[0]), float.Parse(rot[1]), float.Parse(rot[2]), float.Parse(rot[3]));
-            GameObject trackedObject = GameObject.Find(name);
-            trackedObject.transform.position = position;
-            trackedObject.transform.rotation = rotation;
+            if (updates.ContainsKey(name))
+            {
+                string objstr = updates[name];
+                var pos = objstr.Split(':')[1].Split(',');
+                Vector3 position = new Vector3(float.Parse(pos[0]), float.Parse(pos[1]), float.Parse(pos[2]));
+                var rot = objstr.Split(':')[2].Split(',');
+                Quaternion rotation = new Quaternion(float.Parse(rot[0]), float.Parse(rot[1]), float.Parse(rot[2]), float.Parse(rot[3]));
+                GameObject trackedObject = objects[name];
+                trackedObject.transform.position = position;
+                trackedObject.transform.rotation = rotation;
+            }
+
         }
+    }
+
+    void OnApplicationQuit()
+    {
+        receiveThread.Abort();
     }
 }
